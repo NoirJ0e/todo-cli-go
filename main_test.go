@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 	"time"
 
@@ -10,23 +11,23 @@ import (
 func TestCreateValidTask(t *testing.T) {
 	taskContent := "Test"
 	testTask := createTask(taskContent)
-	if testTask.content != taskContent {
+	if testTask.Content != taskContent {
 		t.Errorf("Content was not set correctly")
 	}
 
-	if testTask.isComplete != false {
+	if testTask.IsComplete != false {
 		t.Errorf("complete mark was not set correctly")
 	}
 
-	if time.Since(testTask.createDate) >= time.Second {
+	if time.Since(testTask.CreateDate) >= time.Second {
 		t.Errorf("initial create time was not set correctly")
 	}
 
-	if !testTask.completeDate.IsZero() {
+	if !testTask.CompleteDate.IsZero() {
 		t.Errorf("initial complete time was not set correctly")
 	}
 
-	_, err := uuid.Parse(testTask.id)
+	_, err := uuid.Parse(testTask.ID)
 	if err != nil {
 		t.Errorf("id is not a valid uuid: %v", err)
 	}
@@ -49,10 +50,30 @@ func TestAddTask(t *testing.T) {
 	}
 
 	// test if the content in the newlly add tasks is same as pre-defined
-	if tasks[0].content != testTaskContent {
+	if tasks[0].Content != testTaskContent {
 		t.Errorf("Failed to create task: incorrect task content")
 	}
 }
 
-func TestRecordExist(t *testing.T) {
+func TestSaveDataToFile(t *testing.T) {
+	// verify if the os has the test file already, if so delete it so this test
+	// can run multiple times
+	testFileName := "Test_File.json"
+
+	// create test tasks slice for saving
+	tasks := []taskStruct{
+		createTask("Test1"),
+		createTask("Test2"),
+	}
+	err := saveTasksToFile(&tasks, testFileName)
+	if err != nil {
+		t.Errorf("saveTasksToFile() error: %v", err)
+	}
+
+	//
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	if _, err := os.Stat(testFileName); os.IsNotExist(err) {
+		t.Errorf("saveTasksToFile() did not create file: %s", testFileName)
+	}
 }

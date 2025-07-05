@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,25 +13,39 @@ import (
 // that should contain task content, task creation date, task id and if task is
 // a done at least
 type taskStruct struct {
-	id           string // will use uuid
-	content      string
-	createDate   time.Time
-	completeDate time.Time
-	isComplete   bool
+	ID           string // will use uuid
+	Content      string
+	CreateDate   time.Time
+	CompleteDate time.Time
+	IsComplete   bool
 }
 
 func createTask(content string) taskStruct {
 	task := taskStruct{
-		id:         uuid.NewString(),
-		content:    content,
-		createDate: time.Now(),
-		isComplete: false,
+		ID:         uuid.NewString(),
+		Content:    content,
+		CreateDate: time.Now(),
+		IsComplete: false,
 	}
 	return task
 }
 
 func addTask(tasks *[]taskStruct, task taskStruct) {
 	*tasks = append(*tasks, task)
+}
+
+func saveTasksToFile(tasks *[]taskStruct, fileName string) error {
+	jsonData, err := json.MarshalIndent(tasks, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(fileName, jsonData, 0o644)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 
 func main() {
