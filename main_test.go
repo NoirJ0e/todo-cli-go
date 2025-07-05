@@ -70,10 +70,39 @@ func TestSaveDataToFile(t *testing.T) {
 		t.Errorf("saveTasksToFile() error: %v", err)
 	}
 
-	//
 	t.Cleanup(func() { os.Remove(testFileName) })
 
 	if _, err := os.Stat(testFileName); os.IsNotExist(err) {
 		t.Errorf("saveTasksToFile() did not create file: %s", testFileName)
+	}
+}
+
+func TestLoadTasksFromFile(t *testing.T) {
+	testFileName := "Test_File.json"
+
+	// create test tasks slice for saving
+	originalTasks := []taskStruct{
+		createTask("Test1"),
+		createTask("Test2"),
+	}
+	err := saveTasksToFile(&originalTasks, testFileName)
+	if err != nil {
+		t.Errorf("saveTasksToFile() error: %v", err)
+	}
+
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	loadedTasks, err := loadTasksFromFile(testFileName)
+	if err != nil {
+		t.Errorf("loadTasksFromFile() did not load file %s: %v", testFileName, err)
+	}
+
+	if len(loadedTasks) != len(originalTasks) {
+		t.Errorf("loadTasksFromFile() did not load file %s correctly: expecting load %d ; have %d", testFileName, len(originalTasks), len(loadedTasks))
+	}
+	for i, task := range loadedTasks {
+		if task.Content != originalTasks[i].Content {
+			t.Errorf("loadTasksFromFile() loaded task compromised. Expecting %s, have %s", originalTasks[i].Content, task.Content)
+		}
 	}
 }

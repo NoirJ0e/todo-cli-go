@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const tasksFileName = "tasks.json"
+
 // create a struct to define a "task"
 // that should contain task content, task creation date, task id and if task is
 // a done at least
@@ -48,6 +50,39 @@ func saveTasksToFile(tasks *[]taskStruct, fileName string) error {
 	return err
 }
 
+func loadTasksFromFile(fileName string) ([]taskStruct, error) {
+	var tasks []taskStruct
+	fileContent, err := os.ReadFile(fileName)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []taskStruct{}, nil
+		}
+		return nil, err
+	}
+	err = json.Unmarshal(fileContent, &tasks)
+	if err != nil {
+		return nil, err
+	}
+	return tasks, err
+}
+
 func main() {
-	fmt.Println("TODO App")
+	tasks, err := loadTasksFromFile(tasksFileName)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading tasks: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("--- TODOs ---")
+	if len(tasks) == 0 {
+		fmt.Println("No tasks found. Add one!")
+	} else {
+		for i, task := range tasks {
+			status := " "
+			if task.IsComplete {
+				status = "✔"
+			}
+			fmt.Printf("%d. [%s] %s\n", i+1, status, task.Content)
+		}
+	}
 }
