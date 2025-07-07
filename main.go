@@ -37,6 +37,9 @@ func addTask(tasks *[]taskStruct, task taskStruct) {
 	*tasks = append(*tasks, task)
 }
 
+func removeTask(tasks *[]taskStruct, id string) error {
+}
+
 func saveTasksToFile(tasks *[]taskStruct, fileName string) error {
 	jsonData, err := json.MarshalIndent(tasks, "", "  ")
 	if err != nil {
@@ -105,6 +108,24 @@ func run(args []string) error {
 			return err
 		}
 		addTask(&tasks, createTask(taskContent))
+		return saveTasksToFile(&tasks, fileName)
+	case "remove":
+		if len(args) < 3 {
+			return fmt.Errorf("missing task ID")
+		}
+		fileName := tasksFileName
+		taskID := args[2]
+		// check if a custom file name is provided
+		// todo add <fileName.json> <content>
+		if len(args) > 3 && len(args[2]) > 5 && args[2][len(args[2])-5:] == ".json" {
+			fileName = args[2]
+			taskID = args[3]
+		}
+		tasks, err := loadTasksFromFile(fileName)
+		if err != nil {
+			return err
+		}
+		removeTask(&tasks, taskID)
 		return saveTasksToFile(&tasks, fileName)
 	}
 

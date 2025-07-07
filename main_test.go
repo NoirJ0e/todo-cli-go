@@ -55,6 +55,40 @@ func TestAddTask(t *testing.T) {
 	}
 }
 
+func TestRemoveTask(t *testing.T) {
+	// Setup: Create a slice of tasks
+	tasks := []taskStruct{
+		createTask("Task 1"), // This will be removed
+		createTask("Task 2"),
+		createTask("Task 3"),
+	}
+	initialCount := len(tasks)
+	taskToRemoveID := tasks[0].ID
+
+	// Execute the function
+	err := removeTask(&tasks, taskToRemoveID)
+	if err != nil {
+		t.Fatal("removeTask() returned an unexpected error: %v", err)
+	}
+
+	// Verify the results
+	if len(tasks) != initialCount-1 {
+		t.Error("Expected task count to be %d, but got %d", initialCount-1, len(tasks))
+	}
+
+	for _, task := range tasks {
+		if task.ID == taskToRemoveID {
+			t.Error("Task with ID %s was not removed", taskToRemoveID)
+		}
+	}
+
+	// Test case for trying to remove a non-existent task
+	err = removeTask(&tasks, "non-existent-id")
+	if err == nil {
+		t.Error("Expected an error when trying to remove a non-existent task, but got nil")
+	}
+}
+
 func TestSaveDataToFile(t *testing.T) {
 	// verify if the os has the test file already, if so delete it so this test
 	// can run multiple times
