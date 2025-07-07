@@ -203,9 +203,25 @@ func TestRun(t *testing.T) {
 	t.Run("With `remove` flag", func(t *testing.T) {
 		testFileName := "Test_File_Remove.json"
 		testTasks := setupTestFile(t, testFileName)
+		taskToRemove := testTasks[0]
 
-		// Add your test logic here
-		_ = testTasks // Remove this line when you implement the test
+		args := []string{"todo", "remove", testFileName, taskToRemove.ID}
+		if err := run(args); err != nil {
+			t.Fatalf("run() with remove command returned an error: %v", err)
+		}
+		remainingTasks, err := loadTasksFromFile(testFileName)
+		if err != nil {
+			t.Fatalf("run() with remove command returned an error: %v", err)
+		}
+		if len(remainingTasks) != 1 {
+			t.Fatalf("run() with remove command returned an error: expected 1 task left, got %d", len(remainingTasks))
+		}
+		if remainingTasks[0].ID == taskToRemove.ID {
+			t.Fatalf("run() with remove command returned an error: task with ID %s should be removed, but it still exist", taskToRemove.ID)
+		}
+		if remainingTasks[0].ID != testTasks[1].ID {
+			t.Errorf("run() with remove command returned an error: wrong task been removed from the file")
+		}
 	})
 
 	t.Run("With `complete` flag", func(t *testing.T) {
