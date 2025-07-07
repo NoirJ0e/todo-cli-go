@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -67,22 +68,45 @@ func loadTasksFromFile(fileName string) ([]taskStruct, error) {
 }
 
 func main() {
-	tasks, err := loadTasksFromFile(tasksFileName)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error loading tasks: %v\n", err)
+	if err := run(os.Args); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
+}
 
-	fmt.Println("--- TODOs ---")
-	if len(tasks) == 0 {
-		fmt.Println("No tasks found. Add one!")
-	} else {
-		for i, task := range tasks {
-			status := " "
-			if task.IsComplete {
-				status = "✔"
-			}
-			fmt.Printf("%d. [%s] %s\n", i+1, status, task.Content)
-		}
+func run(args []string) error {
+	validFlags := []string{"add", "remove", "complete"}
+
+	if len(args) < 2 {
+		return nil
 	}
+
+	command := args[1]
+
+	if !slices.Contains(validFlags, command) {
+		return fmt.Errorf("unknown command %q", command)
+	}
+
+	switch command {
+	case "add":
+		if len(args) < 3 {
+			return fmt.Errorf("missing task content")
+		}
+		fileName := tasksFileName
+		taskContent := args[2]
+		// check if a custom file name is provided
+		// todo add <fileName.json> <content>
+		if len(args) > 3 && len(args[2]) > 5 && args[2][len(args[2])-5:] == ".json" {
+			fileName = args[2]
+			taskContent = args[3]
+		}
+		tasks, err := loadTasksFromFile(fileName)
+		if err != nil {
+			return err
+		}
+		addTask(&tasks, createTask(taskContent))
+		return saveTasksToFile(&tasks, fileName)
+	}
+
+	return nil
 }
