@@ -288,4 +288,22 @@ func TestRun(t *testing.T) {
 			t.Errorf("the CompleteDate for task %s was not set.", completedTask.ID)
 		}
 	})
+	t.Run("update command should update the task with new content", func(t *testing.T) {
+		testFileName := "tasks_for_list_test.json"
+		initialTasks := setupTestFile(t, testFileName)
+		initialTaskID := initialTasks[0].ID
+		newTaskContent := "This is a new task content"
+
+		args := []string{"todo", "update", testFileName, initialTaskID, newTaskContent}
+		if err := run(args); err != nil {
+			t.Fatalf("run() with list command returned an error: %v", err)
+		}
+		updatedTasks, err := loadTasksFromFile(testFileName)
+		if err != nil {
+			t.Errorf("loadTasksFromFile() error: %v", err)
+		}
+		if updatedTasks[0].Content != newTaskContent {
+			t.Errorf("task with ID %s should contain content as %s, but have %s ", updatedTasks[0].ID, newTaskContent, updatedTasks[0].Content)
+		}
+	})
 }
