@@ -38,6 +38,19 @@ func addTask(tasks *[]taskStruct, task taskStruct) {
 }
 
 func removeTask(tasks *[]taskStruct, id string) error {
+	taskIndex := -1
+	for taskID, task := range *tasks {
+		if task.ID == id {
+			taskIndex = taskID
+			break
+		}
+	}
+	if taskIndex == -1 {
+		return fmt.Errorf("task id not found")
+	}
+	*tasks = append((*tasks)[:taskIndex], (*tasks)[taskIndex+1:]...)
+
+	return nil
 }
 
 func saveTasksToFile(tasks *[]taskStruct, fileName string) error {

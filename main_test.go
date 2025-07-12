@@ -68,24 +68,24 @@ func TestRemoveTask(t *testing.T) {
 	// Execute the function
 	err := removeTask(&tasks, taskToRemoveID)
 	if err != nil {
-		t.Fatal("removeTask() returned an unexpected error: %v", err)
+		t.Fatalf("removeTask() returned an unexpected error: %v", err)
 	}
 
 	// Verify the results
 	if len(tasks) != initialCount-1 {
-		t.Error("Expected task count to be %d, but got %d", initialCount-1, len(tasks))
+		t.Errorf("Expected task count to be %d, but got %d", initialCount-1, len(tasks))
 	}
 
 	for _, task := range tasks {
 		if task.ID == taskToRemoveID {
-			t.Error("Task with ID %s was not removed", taskToRemoveID)
+			t.Errorf("Task with ID %s was not removed", taskToRemoveID)
 		}
 	}
 
 	// Test case for trying to remove a non-existent task
 	err = removeTask(&tasks, "non-existent-id")
 	if err == nil {
-		t.Error("Expected an error when trying to remove a non-existent task, but got nil")
+		t.Errorf("Expected an error when trying to remove a non-existent task, but got nil")
 	}
 }
 
@@ -258,11 +258,34 @@ func TestRun(t *testing.T) {
 		}
 	})
 
-	t.Run("With `complete` flag", func(t *testing.T) {
-		testFileName := "Test_File_Complete.json"
-		testTasks := setupTestFile(t, testFileName)
+	t.Run("complete command marks a task as complete", func(t *testing.T) {
+		testFileName := "tasks_for_complete_test.json"
+		initialTasks := setupTestFile(t, testFileName)
+		taskToComplete := initialTasks[0]
 
-		// Add your test logic here
-		_ = testTasks // Remove this line when you implement the test
+		args := []string{"todo", "complete", testFileName, taskToComplete.ID}
+		if err := run(args); err != nil {
+			t.Fatalf("run() with complete command returned an error: %v", err)
+		}
+		updatedTasks, err := loadTasksFromFile(testFileName)
+		if err != nil {
+			t.Fatalf("failed to load tasks after complete: %v", err)
+		}
+		var completedTask taskStruct
+		for _, task := range updatedTasks {
+			if task.ID == taskToComplete.ID {
+				completedTask = task
+				break
+			}
+		}
+		if completedTask.ID == "" {
+			t.Fatalf("could not find the task that supposed to be completed")
+		}
+		if !completedTask.IsComplete {
+			t.Fatalf("taskw ith ID %s should have been marked as complete, but it wasnt", completedTask.ID)
+		}
+		if completedTask.CompleteDate.IsZero() {
+			t.Errorf("the CompleteDate for task %s was not set.", completedTask.ID)
+		}
 	})
 }
