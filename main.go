@@ -83,6 +83,15 @@ func loadTasksFromFile(fileName string) ([]taskStruct, error) {
 	return tasks, err
 }
 
+func completeTask(tasks *[]taskStruct, taskID string) {
+	for i := range *tasks {
+		if (*tasks)[i].ID == taskID {
+			(*tasks)[i].IsComplete = true
+			(*tasks)[i].CompleteDate = time.Now()
+		}
+	}
+}
+
 func main() {
 	if err := run(os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -139,6 +148,24 @@ func run(args []string) error {
 			return err
 		}
 		removeTask(&tasks, taskID)
+		return saveTasksToFile(&tasks, fileName)
+	case "complete":
+		if len(args) < 3 {
+			return fmt.Errorf("missing task ID")
+		}
+		fileName := tasksFileName
+		taskID := args[2]
+		// check if a custom file name is provided
+		// todo add <fileName.json> <content>
+		if len(args) > 3 && len(args[2]) > 5 && args[2][len(args[2])-5:] == ".json" {
+			fileName = args[2]
+			taskID = args[3]
+		}
+		tasks, err := loadTasksFromFile(fileName)
+		if err != nil {
+			return err
+		}
+		completeTask(&tasks, taskID)
 		return saveTasksToFile(&tasks, fileName)
 	}
 
