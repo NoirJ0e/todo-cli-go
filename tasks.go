@@ -9,7 +9,9 @@ import (
 	"github.com/google/uuid"
 )
 
-const tasksFileName = "tasks.json"
+var tasksFileName = "tasks.json"
+
+// const tasksFileName = "tasks.json"
 
 type taskStruct struct {
 	ID           string    `json:"id"`
