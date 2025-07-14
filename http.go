@@ -20,3 +20,6 @@ func getTasksHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, tasks)
 }
+
+func createTaskHandler(c *gin.Context) {
+}
