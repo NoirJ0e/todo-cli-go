@@ -89,6 +89,56 @@ func TestRemoveTask(t *testing.T) {
 	}
 }
 
+func TestUpdateTask(t *testing.T) {
+	tasks := []taskStruct{
+		createTask("Original Task 1"),
+		createTask("Original Task 2"),
+	}
+	t.Run("update existing task succeeds", func(t *testing.T) {
+		newContent := "Updateded Task Content"
+		err := updateTask(&tasks, tasks[0].ID, newContent)
+		if err != nil {
+			t.Errorf("updateTask should not return error for existing task: %v", err)
+		}
+		if tasks[0].Content != newContent {
+			t.Errorf("Expected content %s, got %s", newContent, tasks[0].Content)
+		}
+	})
+	t.Run("update non-existent task returns error", func(t *testing.T) {
+		err := updateTasks(&tassks, "fake-uuid", "something")
+		if err == nil {
+			t.Errorf("updateTask should return error for non-existent task")
+		}
+	})
+}
+
+func TestCompleteTask(t *testing.T) {
+	tasks := []taskStruct{
+		createTask("Original Task 1"),
+		createTask("Original Task 2"),
+	}
+
+	t.Run("complete existing task succeeds", func(t *testing.T) {
+		err := completeTask(&tasks, tasks[0].ID)
+		if err != nil {
+			t.Errorf("completeTask should not return for existing task: %v", err)
+		}
+
+		if !tasks[0].IsComplete {
+			t.Errorf("Task should be marked as complete")
+		}
+		if tasks[0].CompleteDate.IsZero() {
+			t.Errorf("CompleteDate should be test")
+		}
+	})
+	t.Run("complete non-existing task returns error", func(t *testing.T) {
+		err := completeTask(&tasks, tasks[0].ID)
+		if err == nil {
+			t.Errorf("completeTask should return error for non-existent task")
+		}
+	})
+}
+
 func TestSaveDataToFile(t *testing.T) {
 	// verify if the os has the test file already, if so delete it so this test
 	// can run multiple times
