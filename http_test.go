@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestGetTasks(t *testing.T) {
+func TestGetTasksHTTP(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := setupRouter()
 
@@ -30,7 +30,7 @@ func TestGetTasks(t *testing.T) {
 	}
 }
 
-func TestCreateTask(t *testing.T) {
+func TestCreateTaskHTTP(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testFileName := "test_http_create_tasks.json"
 	err := saveTasksToFile(&[]taskStruct{}, testFileName)
