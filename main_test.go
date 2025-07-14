@@ -105,7 +105,7 @@ func TestUpdateTask(t *testing.T) {
 		}
 	})
 	t.Run("update non-existent task returns error", func(t *testing.T) {
-		err := updateTasks(&tassks, "fake-uuid", "something")
+		err := updateTask(&tasks, "fake-uuid", "something")
 		if err == nil {
 			t.Errorf("updateTask should return error for non-existent task")
 		}
@@ -132,7 +132,7 @@ func TestCompleteTask(t *testing.T) {
 		}
 	})
 	t.Run("complete non-existing task returns error", func(t *testing.T) {
-		err := completeTask(&tasks, tasks[0].ID)
+		err := completeTask(&tasks, "fake-uuid")
 		if err == nil {
 			t.Errorf("completeTask should return error for non-existent task")
 		}

@@ -1,104 +1,10 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"slices"
-	"time"
-
-	"github.com/google/uuid"
 )
-
-const tasksFileName = "tasks.json"
-
-// create a struct to define a "task"
-// that should contain task content, task creation date, task id and if task is
-// a done at least
-type taskStruct struct {
-	ID           string // will use uuid
-	Content      string
-	CreateDate   time.Time
-	CompleteDate time.Time
-	IsComplete   bool
-}
-
-func createTask(content string) taskStruct {
-	task := taskStruct{
-		ID:         uuid.NewString(),
-		Content:    content,
-		CreateDate: time.Now(),
-		IsComplete: false,
-	}
-	return task
-}
-
-func addTask(tasks *[]taskStruct, task taskStruct) {
-	*tasks = append(*tasks, task)
-}
-
-func removeTask(tasks *[]taskStruct, id string) error {
-	taskIndex := -1
-	for taskID, task := range *tasks {
-		if task.ID == id {
-			taskIndex = taskID
-			break
-		}
-	}
-	if taskIndex == -1 {
-		return fmt.Errorf("task id not found")
-	}
-	*tasks = append((*tasks)[:taskIndex], (*tasks)[taskIndex+1:]...)
-
-	return nil
-}
-
-func saveTasksToFile(tasks *[]taskStruct, fileName string) error {
-	jsonData, err := json.MarshalIndent(tasks, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	err = os.WriteFile(fileName, jsonData, 0o644)
-	if err != nil {
-		return err
-	}
-
-	return err
-}
-
-func loadTasksFromFile(fileName string) ([]taskStruct, error) {
-	var tasks []taskStruct
-	fileContent, err := os.ReadFile(fileName)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []taskStruct{}, nil
-		}
-		return nil, err
-	}
-	err = json.Unmarshal(fileContent, &tasks)
-	if err != nil {
-		return nil, err
-	}
-	return tasks, err
-}
-
-func completeTask(tasks *[]taskStruct, taskID string) {
-	for i := range *tasks {
-		if (*tasks)[i].ID == taskID {
-			(*tasks)[i].IsComplete = true
-			(*tasks)[i].CompleteDate = time.Now()
-		}
-	}
-}
-
-func updateTask(tasks *[]taskStruct, taskID string, newTaskContent string) {
-	for i := range *tasks {
-		if (*tasks)[i].ID == taskID {
-			(*tasks)[i].Content = newTaskContent
-		}
-	}
-}
 
 func main() {
 	if err := run(os.Args); err != nil {
