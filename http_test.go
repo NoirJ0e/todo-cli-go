@@ -143,3 +143,34 @@ func TestUpdateTaskHTTP(t *testing.T) {
 		t.Errorf("Task was not updated in file. Expected 'Updated Task Content', but got %s", foundTask.Content)
 	}
 }
+
+func TestUpdateNonExistentTaskHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	testFileName := "test_http_update_empty.json"
+	testTasks := []taskStruct{
+		createTask("Task 1"),
+		createTask("Task 2"),
+	}
+	err := saveTasksToFile(&testTasks, testFileName)
+	if err != nil {
+		t.Fatalf("Failed to setup test file: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	originalFileName := tasksFileName
+	tasksFileName = testFileName
+	t.Cleanup(func() { tasksFileName = originalFileName })
+
+	router := setupRouter()
+
+	requestBody := `{"content": "Updated Content"}`
+	req, _ := http.NewRequest("PUT", "/tasks/fake-uuid-123", strings.NewReader(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status 404, but got %d", w.Code)
+	}
+}
