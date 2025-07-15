@@ -7,7 +7,11 @@ import (
 )
 
 type CreateTaskRequest struct {
-	Content string `json:"content" binding: "required"`
+	Content string `json:"content" binding:"required"`
+}
+
+type UpdateTaskRequest struct {
+	Content string `json:"content" binding:"required"`
 }
 
 func setupRouter() *gin.Engine {
@@ -15,6 +19,7 @@ func setupRouter() *gin.Engine {
 
 	router.GET("/tasks", getTasksHandler)
 	router.POST("/tasks", createTaskHandler)
+	router.PUT("/tasks/:id", updateTaskHandler)
 	return router
 }
 
@@ -48,4 +53,38 @@ func createTaskHandler(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, newTask)
+}
+
+func updateTaskHandler(c *gin.Context) {
+	taskID := c.Param("id")
+	var request UpdateTaskRequest
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	tasks, err := loadTasksFromFile(tasksFileName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+	err = updateTask(&tasks, taskID, request.Content)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := saveTasksToFile(&tasks, tasksFileName); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var updatedTask taskStruct
+	for _, task := range tasks {
+		if task.ID == taskID {
+			updatedTask = task
+			break
+		}
+	}
+	c.JSON(http.StatusOK, updatedTask)
 }
