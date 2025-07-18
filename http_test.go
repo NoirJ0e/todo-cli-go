@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -172,5 +173,71 @@ func TestUpdateNonExistentTaskHTTP(t *testing.T) {
 
 	if w.Code != http.StatusNotFound {
 		t.Errorf("Expected status 404, but got %d", w.Code)
+	}
+}
+
+func TestCompleteTaskHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	testFileName := "test_http_update_empty.json"
+	testTasks := []taskStruct{
+		createTask("Task 1"),
+		createTask("Task 2"),
+	}
+	err := saveTasksToFile(&testTasks, testFileName)
+	if err != nil {
+		t.Fatalf("Failed to setup test file: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	originalFileName := tasksFileName
+	tasksFileName = testFileName
+	t.Cleanup(func() { tasksFileName = originalFileName })
+
+	router := setupRouter()
+
+	taskToUpdate := testTasks[0]
+	requestBody := `{"isComplete": true}`
+	url := fmt.Sprintf("/tasks/%s", taskToUpdate.ID)
+	req, _ := http.NewRequest("PATCH", url, strings.NewReader(requestBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	var updatedTask taskStruct
+	err = json.Unmarshal(w.Body.Bytes(), &updatedTask)
+	if err != nil {
+		t.Errorf("Failed to parse JSON response: %v", err)
+	}
+
+	if updatedTask.ID != taskToUpdate.ID {
+		t.Errorf("Expected ID %s, got %s", taskToUpdate.ID, updatedTask.ID)
+	}
+
+	tasks, err := loadTasksFromFile(testFileName)
+	if err != nil {
+		t.Errorf("Failed to load tasks from file: %v", err)
+	}
+
+	var foundTask taskStruct
+	for _, task := range tasks {
+		if task.ID == taskToUpdate.ID {
+			foundTask = task
+			break
+		}
+	}
+
+	if foundTask.IsComplete != true {
+		t.Errorf("Task was not updated in file. Expected mark as complete, but got %t", foundTask.IsComplete)
+	}
+	if foundTask.CompleteDate.IsZero() {
+		t.Error("Expected CompleteDate to be set, but it is zero")
+	}
+	if time.Since(foundTask.CompleteDate) > time.Second {
+		t.Error("CompleteDate should be recent")
 	}
 }
