@@ -241,3 +241,50 @@ func TestCompleteTaskHTTP(t *testing.T) {
 		t.Error("CompleteDate should be recent")
 	}
 }
+
+func TestDeleteTaskHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	testFileName := "test_http_delete.json"
+	testTasks := []taskStruct{
+		createTask("Task 1"),
+		createTask("Task 2"),
+	}
+	err := saveTasksToFile(&testTasks, testFileName)
+	if err != nil {
+		t.Fatalf("Failed to setup test file: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	originalFileName := tasksFileName
+	tasksFileName = testFileName
+	t.Cleanup(func() { tasksFileName = originalFileName })
+
+	router := setupRouter()
+
+	taskToDelete := testTasks[0]
+	url := fmt.Sprintf("/tasks/%s", taskToDelete.ID)
+	req, _ := http.NewRequest("DELETE", url, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNoContent {
+		t.Errorf("Expected status 204, got %d", w.Code)
+	}
+
+	tasks, err := loadTasksFromFile(testFileName)
+	if err != nil {
+		t.Errorf("Failed to load tasks from file: %v", err)
+	}
+
+	if len(tasks) != 1 {
+		t.Errorf("Expected to have 1 taks left, but have %d", len(tasks))
+	}
+
+	for _, task := range tasks {
+		if task.ID == taskToDelete.ID {
+			t.Errorf("Expected task with ID %s be deleted, but it still exist", task.ID)
+			break
+		}
+	}
+}
