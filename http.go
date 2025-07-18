@@ -14,12 +14,17 @@ type UpdateTaskRequest struct {
 	Content string `json:"content" binding:"required"`
 }
 
+type CompleteTaskRequest struct {
+	IsComplete bool `json:"isComplete" binding:"required"`
+}
+
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 
 	router.GET("/tasks", getTasksHandler)
 	router.POST("/tasks", createTaskHandler)
 	router.PUT("/tasks/:id", updateTaskHandler)
+	router.PATCH("/tasks/:id", completeTaskHandler)
 	return router
 }
 
@@ -69,6 +74,40 @@ func updateTaskHandler(c *gin.Context) {
 		return
 	}
 	err = updateTask(&tasks, taskID, request.Content)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := saveTasksToFile(&tasks, tasksFileName); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	var updatedTask taskStruct
+	for _, task := range tasks {
+		if task.ID == taskID {
+			updatedTask = task
+			break
+		}
+	}
+	c.JSON(http.StatusOK, updatedTask)
+}
+
+func completeTaskHandler(c *gin.Context) {
+	taskID := c.Param("id")
+	var request CompleteTaskRequest
+	if err := c.ShouldBindBodyWithJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	}
+
+	tasks, err := loadTasksFromFile(tasksFileName)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = completeTask(&tasks, taskID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
