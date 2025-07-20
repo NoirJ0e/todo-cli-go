@@ -25,6 +25,7 @@ func setupRouter() *gin.Engine {
 	router.POST("/tasks", createTaskHandler)
 	router.PUT("/tasks/:id", updateTaskHandler)
 	router.PATCH("/tasks/:id", completeTaskHandler)
+	router.DELETE("tasks/:id", deleteTaskHandler)
 	return router
 }
 
@@ -126,4 +127,27 @@ func completeTaskHandler(c *gin.Context) {
 		}
 	}
 	c.JSON(http.StatusOK, updatedTask)
+}
+
+func deleteTaskHandler(c *gin.Context) {
+	taskID := c.Param("id")
+
+	tasks, err := loadTasksFromFile(tasksFileName)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	err = removeTask(&tasks, taskID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := saveTasksToFile(&tasks, tasksFileName); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusNoContent, nil)
 }
