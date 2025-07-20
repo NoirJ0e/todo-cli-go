@@ -25,7 +25,7 @@ func setupRouter() *gin.Engine {
 	router.POST("/tasks", createTaskHandler)
 	router.PUT("/tasks/:id", updateTaskHandler)
 	router.PATCH("/tasks/:id", completeTaskHandler)
-	router.DELETE("tasks/:id", deleteTaskHandler)
+	router.DELETE("/tasks/:id", deleteTaskHandler)
 	return router
 }
 
