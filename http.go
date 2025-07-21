@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -36,37 +37,55 @@ func getTasksHandler(c *gin.Context) {
 		return
 	}
 
+	// NOTE: status check begins here
+
 	// Get query parameter "isComplete" from the URL
 	// c.Query() returns the value as a string, or empty string if not found
 	isCompleteParam := c.Query("isComplete")
+	contentParams := c.Query("content")
 
 	// If no filter is specified, return all tasks (original behavior)
-	if isCompleteParam == "" {
+	if isCompleteParam == "" && contentParams == "" {
 		c.JSON(http.StatusOK, tasks)
 		return
 	}
 
-	// Convert string parameter to boolean
-	// "true" -> true, "false" -> false, anything else -> error
-	var filterComplete bool
-	switch isCompleteParam {
-	case "true":
-		filterComplete = true
-	case "false":
-		filterComplete = false
-	default:
-		c.JSON(http.StatusBadRequest, gin.H{"error": "isComplete must be 'true' or 'false'"})
-		return
-
-	}
-
-	// Filter the tasks based on the isComplete status
 	var filteredTasks []taskStruct
 	for _, task := range tasks {
-		if task.IsComplete == filterComplete {
+		shouldInclude := true
+		if isCompleteParam != "" {
+			var filterComplete bool
+			switch isCompleteParam {
+			case "true":
+				filterComplete = true
+			case "false":
+				filterComplete = false
+			default:
+				c.JSON(http.StatusBadRequest, gin.H{"error": "isComplete must be 'true' or 'false'"})
+				return
+			}
+			if task.IsComplete != filterComplete {
+				shouldInclude = false
+			}
+		}
+
+		if contentParams != "" && shouldInclude {
+			splitedContentParms := strings.SplitSeq(contentParams, " ")
+			for partialContent := range splitedContentParms {
+				if !strings.Contains(strings.ToLower(task.Content), strings.ToLower(partialContent)) {
+					shouldInclude = false
+					break
+				}
+			}
+		}
+		if shouldInclude {
 			filteredTasks = append(filteredTasks, task)
 		}
+
 	}
+
+	// Convert string parameter to boolean
+	// "true" -> true, "false" -> false, anything else -> error
 
 	// Return the filtered results
 	c.JSON(http.StatusOK, filteredTasks)
