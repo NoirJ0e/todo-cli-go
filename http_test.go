@@ -422,8 +422,8 @@ func TestFilterTaskBasedOnContentHTTP(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/tasks?content=randomstuff", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
-		if w.Code != http.StatusNotFound {
-			t.Errorf("Expected status code 404, but got %d", w.Code)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, but got %d", w.Code)
 		}
 		var results []taskStruct
 		err := json.Unmarshal(w.Body.Bytes(), &results)
