@@ -356,3 +356,103 @@ func TestFilterTaskBasedOnStatusHTTP(t *testing.T) {
 		}
 	})
 }
+
+func TestFilterTaskBasedOnContentHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	testFileName := "test_http_filter_content.json"
+	testTasks := []taskStruct{
+		createTask("buy groceries"),
+		createTask("call dentist"),
+	}
+	err := saveTasksToFile(&testTasks, testFileName)
+	if err != nil {
+		t.Fatalf("Failed to setup test file: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	originalFileName := tasksFileName
+	tasksFileName = testFileName
+	t.Cleanup(func() { tasksFileName = originalFileName })
+
+	router := setupRouter()
+	t.Run("filter by partial content match", func(t *testing.T) {
+		// Test "/tasks?content=groceries" matches "Buy groceries"
+		req, _ := http.NewRequest("GET", "/tasks?content=groceries", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, but got %d", w.Code)
+		}
+		var results []taskStruct
+		err := json.Unmarshal(w.Body.Bytes(), &results)
+		if err != nil {
+			t.Errorf("Error handling return result: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected results has length of 1, but got %d", len(results))
+		}
+		if results[0].Content != "buy groceries" {
+			t.Errorf("Expected results to 'buy groceries', but it's %s", results[0].Content)
+		}
+	})
+
+	t.Run("filter by multiple words", func(t *testing.T) {
+		// Test "/tasks?content=buy%20groceries" (URL encoded space)
+		req, _ := http.NewRequest("GET", "/tasks?content=buy%20groceries", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, but got %d", w.Code)
+		}
+		var results []taskStruct
+		err := json.Unmarshal(w.Body.Bytes(), &results)
+		if err != nil {
+			t.Errorf("Error handling return result: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected results has length of 1, but got %d", len(results))
+		}
+		if results[0].Content != "buy groceries" {
+			t.Errorf("Expected results to 'buy groceries', but it's %s", results[0].Content)
+		}
+	})
+
+	t.Run("filter with no matches", func(t *testing.T) {
+		// Test "/tasks?content=xyz" returns empty array
+		req, _ := http.NewRequest("GET", "/tasks?content=randomstuff", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Expected status code 404, but got %d", w.Code)
+		}
+		var results []taskStruct
+		err := json.Unmarshal(w.Body.Bytes(), &results)
+		if err != nil {
+			t.Errorf("Error handling return result: %v", err)
+		}
+		if len(results) != 0 {
+			t.Errorf("Expected results has length of 0, but got %d", len(results))
+		}
+	})
+
+	t.Run("case insensitive search", func(t *testing.T) {
+		// Test "/tasks?content=GROCERIES" still matches "Buy groceries"
+		req, _ := http.NewRequest("GET", "/tasks?content=GROCERIES", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, but got %d", w.Code)
+		}
+		var results []taskStruct
+		err := json.Unmarshal(w.Body.Bytes(), &results)
+		if err != nil {
+			t.Errorf("Error handling return result: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected results has length of 1, but got %d", len(results))
+		}
+		if results[0].Content != "buy groceries" {
+			t.Errorf("Expected results to 'buy groceries', but it's %s", results[0].Content)
+		}
+	})
+}
