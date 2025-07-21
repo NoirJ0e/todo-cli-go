@@ -288,3 +288,71 @@ func TestDeleteTaskHTTP(t *testing.T) {
 		}
 	}
 }
+
+func TestFilterTaskBasedOnStatusHTTP(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	testFileName := "test_http_filter_status.json"
+	testTasks := []taskStruct{
+		createTask("Task 1"),
+		createTask("Task 2"),
+	}
+	err := saveTasksToFile(&testTasks, testFileName)
+	if err != nil {
+		t.Fatalf("Failed to setup test file: %v", err)
+	}
+	t.Cleanup(func() { os.Remove(testFileName) })
+
+	originalFileName := tasksFileName
+	tasksFileName = testFileName
+	t.Cleanup(func() { tasksFileName = originalFileName })
+
+	// Mark task 1 as complete and save back to file
+	if err := completeTask(&testTasks, testTasks[0].ID); err != nil {
+		t.Fatalf("Failed to complete task: %v", err)
+	}
+	saveTasksToFile(&testTasks, tasksFileName)
+
+	router := setupRouter()
+
+	t.Run("filter completed tasks", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/tasks?isComplete=true", nil)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, but got %d", w.Code)
+		}
+		var results []taskStruct
+		err := json.Unmarshal(w.Body.Bytes(), &results)
+		if err != nil {
+			t.Errorf("Error handling return result: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected results has length of 1, but got %d", len(results))
+		}
+		if results[0].IsComplete != true {
+			t.Error("Expected results to be complete, but it's not")
+		}
+	})
+
+	t.Run("filter incomplete tasks", func(t *testing.T) {
+		req, _ := http.NewRequest("GET", "/tasks?isComplete=false", nil)
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code 200, but got %d", w.Code)
+		}
+		var results []taskStruct
+		err := json.Unmarshal(w.Body.Bytes(), &results)
+		if err != nil {
+			t.Errorf("Error handling return result: %v", err)
+		}
+		if len(results) != 1 {
+			t.Errorf("Expected results has length of 1, but got %d", len(results))
+		}
+		if results[0].IsComplete != false {
+			t.Error("Expected results to be incomplete, but it's not")
+		}
+	})
+}
