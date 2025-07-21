@@ -33,8 +33,43 @@ func getTasksHandler(c *gin.Context) {
 	tasks, err := loadTasksFromFile(tasksFileName)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
-	c.JSON(http.StatusOK, tasks)
+
+	// Get query parameter "isComplete" from the URL
+	// c.Query() returns the value as a string, or empty string if not found
+	isCompleteParam := c.Query("isComplete")
+
+	// If no filter is specified, return all tasks (original behavior)
+	if isCompleteParam == "" {
+		c.JSON(http.StatusOK, tasks)
+		return
+	}
+
+	// Convert string parameter to boolean
+	// "true" -> true, "false" -> false, anything else -> error
+	var filterComplete bool
+	switch isCompleteParam {
+	case "true":
+		filterComplete = true
+	case "false":
+		filterComplete = false
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "isComplete must be 'true' or 'false'"})
+		return
+
+	}
+
+	// Filter the tasks based on the isComplete status
+	var filteredTasks []taskStruct
+	for _, task := range tasks {
+		if task.IsComplete == filterComplete {
+			filteredTasks = append(filteredTasks, task)
+		}
+	}
+
+	// Return the filtered results
+	c.JSON(http.StatusOK, filteredTasks)
 }
 
 func createTaskHandler(c *gin.Context) {
@@ -150,4 +185,7 @@ func deleteTaskHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusNoContent, nil)
+}
+
+func filterTaskHandler(c *gin.Context) {
 }
