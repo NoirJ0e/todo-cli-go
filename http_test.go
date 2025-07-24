@@ -177,69 +177,140 @@ func TestUpdateNonExistentTaskHTTP(t *testing.T) {
 }
 
 func TestCompleteTaskHTTP(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	testFileName := "test_http_update_empty.json"
-	testTasks := []taskStruct{
-		createTask("Task 1"),
-		createTask("Task 2"),
-	}
-	err := saveTasksToFile(&testTasks, testFileName)
-	if err != nil {
-		t.Fatalf("Failed to setup test file: %v", err)
-	}
-	t.Cleanup(func() { os.Remove(testFileName) })
-
-	originalFileName := tasksFileName
-	tasksFileName = testFileName
-	t.Cleanup(func() { tasksFileName = originalFileName })
-
-	router := setupRouter()
-
-	taskToUpdate := testTasks[0]
-	requestBody := `{"isComplete": true}`
-	url := fmt.Sprintf("/tasks/%s", taskToUpdate.ID)
-	req, _ := http.NewRequest("PATCH", url, strings.NewReader(requestBody))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	var updatedTask taskStruct
-	err = json.Unmarshal(w.Body.Bytes(), &updatedTask)
-	if err != nil {
-		t.Errorf("Failed to parse JSON response: %v", err)
-	}
-
-	if updatedTask.ID != taskToUpdate.ID {
-		t.Errorf("Expected ID %s, got %s", taskToUpdate.ID, updatedTask.ID)
-	}
-
-	tasks, err := loadTasksFromFile(testFileName)
-	if err != nil {
-		t.Errorf("Failed to load tasks from file: %v", err)
-	}
-
-	var foundTask taskStruct
-	for _, task := range tasks {
-		if task.ID == taskToUpdate.ID {
-			foundTask = task
-			break
+	t.Run("update an incomplete task should mark is as complete and update complete date to now", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		testFileName := "test_http_complete_task.json"
+		testTasks := []taskStruct{
+			createTask("Task 1"),
+			createTask("Task 2"),
 		}
-	}
+		err := saveTasksToFile(&testTasks, testFileName)
+		if err != nil {
+			t.Fatalf("Failed to setup test file: %v", err)
+		}
+		t.Cleanup(func() { os.Remove(testFileName) })
 
-	if foundTask.IsComplete != true {
-		t.Errorf("Task was not updated in file. Expected mark as complete, but got %t", foundTask.IsComplete)
-	}
-	if foundTask.CompleteDate.IsZero() {
-		t.Error("Expected CompleteDate to be set, but it is zero")
-	}
-	if time.Since(foundTask.CompleteDate) > time.Second {
-		t.Error("CompleteDate should be recent")
-	}
+		originalFileName := tasksFileName
+		tasksFileName = testFileName
+		t.Cleanup(func() { tasksFileName = originalFileName })
+
+		router := setupRouter()
+
+		taskToUpdate := testTasks[0]
+		requestBody := `{"isComplete": true}`
+		url := fmt.Sprintf("/tasks/%s", taskToUpdate.ID)
+		req, _ := http.NewRequest("PATCH", url, strings.NewReader(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		var updatedTask taskStruct
+		err = json.Unmarshal(w.Body.Bytes(), &updatedTask)
+		if err != nil {
+			t.Errorf("Failed to parse JSON response: %v", err)
+		}
+
+		if updatedTask.ID != taskToUpdate.ID {
+			t.Errorf("Expected ID %s, got %s", taskToUpdate.ID, updatedTask.ID)
+		}
+
+		tasks, err := loadTasksFromFile(testFileName)
+		if err != nil {
+			t.Errorf("Failed to load tasks from file: %v", err)
+		}
+
+		var foundTask taskStruct
+		for _, task := range tasks {
+			if task.ID == taskToUpdate.ID {
+				foundTask = task
+				break
+			}
+		}
+
+		if foundTask.IsComplete != true {
+			t.Errorf("Task was not updated in file. Expected mark as complete, but got %t", foundTask.IsComplete)
+		}
+		if foundTask.CompleteDate.IsZero() {
+			t.Error("Expected CompleteDate to be set, but it is zero")
+		}
+		if time.Since(foundTask.CompleteDate) > time.Second {
+			t.Error("CompleteDate should be recent")
+		}
+	})
+
+	t.Run("update an already completed task should leave it as complete and do nothing", func(t *testing.T) {
+		gin.SetMode(gin.TestMode)
+		testFileName := "test_http_complete_task.json"
+		testTasks := []taskStruct{
+			createTask("Task 1"),
+			createTask("Task 2"),
+		}
+		err := saveTasksToFile(&testTasks, testFileName)
+		if err != nil {
+			t.Fatalf("Failed to setup test file: %v", err)
+		}
+		t.Cleanup(func() { os.Remove(testFileName) })
+
+		originalFileName := tasksFileName
+		tasksFileName = testFileName
+		t.Cleanup(func() { tasksFileName = originalFileName })
+
+		router := setupRouter()
+		// mark the first task as completed
+		completeTask(&testTasks, testTasks[0].ID)
+
+		taskToUpdate := testTasks[0]
+		requestBody := `{"isComplete": true}`
+		url := fmt.Sprintf("/tasks/%s", taskToUpdate.ID)
+		req, _ := http.NewRequest("PATCH", url, strings.NewReader(requestBody))
+		req.Header.Set("Content-Type", "application/json")
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		var updatedTask taskStruct
+		err = json.Unmarshal(w.Body.Bytes(), &updatedTask)
+		if err != nil {
+			t.Errorf("Failed to parse JSON response: %v", err)
+		}
+
+		if updatedTask.ID != taskToUpdate.ID {
+			t.Errorf("Expected ID %s, got %s", taskToUpdate.ID, updatedTask.ID)
+		}
+
+		tasks, err := loadTasksFromFile(testFileName)
+		if err != nil {
+			t.Errorf("Failed to load tasks from file: %v", err)
+		}
+
+		var foundTask taskStruct
+		for _, task := range tasks {
+			if task.ID == taskToUpdate.ID {
+				foundTask = task
+				break
+			}
+		}
+
+		if foundTask.IsComplete != true {
+			t.Errorf("Task was not updated in file. Expected mark as complete, but got %t", foundTask.IsComplete)
+		}
+		if foundTask.CompleteDate.IsZero() {
+			t.Error("Expected CompleteDate to be set, but it is zero")
+		}
+		originalCompleteDate := taskToUpdate.CompleteDate
+		if originalCompleteDate != foundTask.CompleteDate {
+			t.Error("CompleteDate should not be changed")
+		}
+	})
 }
 
 func TestDeleteTaskHTTP(t *testing.T) {
