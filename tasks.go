@@ -84,9 +84,13 @@ func loadTasksFromFile(fileName string) ([]taskStruct, error) {
 func completeTask(tasks *[]taskStruct, taskID string) error {
 	for i := range *tasks {
 		if (*tasks)[i].ID == taskID {
-			(*tasks)[i].IsComplete = true
-			(*tasks)[i].CompleteDate = time.Now()
-			return nil
+			if (*tasks)[i].IsComplete {
+				return nil
+			} else {
+				(*tasks)[i].IsComplete = true
+				(*tasks)[i].CompleteDate = time.Now()
+				return nil
+			}
 		}
 	}
 	return fmt.Errorf("task with ID %s not found", taskID)

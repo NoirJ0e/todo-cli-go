@@ -263,8 +263,14 @@ func TestCompleteTaskHTTP(t *testing.T) {
 		router := setupRouter()
 		// mark the first task as completed
 		completeTask(&testTasks, testTasks[0].ID)
+		err = saveTasksToFile(&testTasks, testFileName)
+		if err != nil {
+			t.Fatalf("Failed to setup test file: %v", err)
+		}
 
 		taskToUpdate := testTasks[0]
+		originalCompleteDate := taskToUpdate.CompleteDate
+
 		requestBody := `{"isComplete": true}`
 		url := fmt.Sprintf("/tasks/%s", taskToUpdate.ID)
 		req, _ := http.NewRequest("PATCH", url, strings.NewReader(requestBody))
@@ -306,9 +312,8 @@ func TestCompleteTaskHTTP(t *testing.T) {
 		if foundTask.CompleteDate.IsZero() {
 			t.Error("Expected CompleteDate to be set, but it is zero")
 		}
-		originalCompleteDate := taskToUpdate.CompleteDate
-		if originalCompleteDate != foundTask.CompleteDate {
-			t.Error("CompleteDate should not be changed")
+		if !originalCompleteDate.Equal(foundTask.CompleteDate) {
+			t.Errorf("CompleteDate should not be changed. Oriignal completeDate is %s, but the foundTask has %s", originalCompleteDate, foundTask.CompleteDate)
 		}
 	})
 }
